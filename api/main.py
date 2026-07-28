@@ -1,7 +1,7 @@
 import uvicorn
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from module import DBInterface
+from module import MongoDB_Interface
 from api.routers.capture.capture import capture_router
 from api.routers.query.queries import queries_router 
 from api.routers.query.events import query_events_router
@@ -14,7 +14,7 @@ from api.routers.query.dispositions import query_dispositions_router
 
 @asynccontextmanager
 async def lifespan(app:FastAPI):
-    app.state.db=DBInterface() # 서버 시작 시 1번 생성
+    app.state.db=MongoDB_Interface() # 서버 시작 시 1번 생성
     yield # 이 줄을 기준으로 위쪽은 서버 시작 시 실행되는 코드, 아래쪽은 서버 종료 시 실행되는 코드
     app.state.db.disconnect_db() # 서버 종료 시 1번 종료
 

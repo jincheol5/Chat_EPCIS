@@ -3,7 +3,7 @@ from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 
 
-class DBInterface:
+class MongoDB_Interface:
     """
     Collections:
         - event

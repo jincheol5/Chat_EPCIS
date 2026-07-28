@@ -1,13 +1,13 @@
 from fastapi import APIRouter,Request,HTTPException
 from starlette.concurrency import run_in_threadpool
 from schema import EPCISDocument
-from module import CaptureModule,DBInterface
+from module import CaptureModule,MongoDB_Interface
 
 capture_router=APIRouter(prefix="/capture",tags=["capture"])
 
 @capture_router.post("/")
 async def capture(document:EPCISDocument,request:Request):
-    db:DBInterface=request.app.state.db
+    db:MongoDB_Interface=request.app.state.db
     try:
         event_list,vocabulary_list=CaptureModule.extract_from_epcis_document(document=document)
         event_list=CaptureModule.transform_events(event_list=event_list)
