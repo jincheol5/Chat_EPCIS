@@ -2,6 +2,9 @@ import networkx as nx
 from datetime import datetime
 
 class OTG:
+    """
+    Object Traceability Graph
+    """
     def __init__(self):
         self.graph=nx.MultiDiGraph() # 동일한 두 노드 사이에 여러 개의 방향성 엣지를 저장 가능, edge=(src,dst,key) 3가지 값으로 식별
 
@@ -50,16 +53,15 @@ class OTG:
                 event_times=[event_time],
             )
 
-    def transform_event_to_graph(self,
+    def transform_object_event_to_graph(self,
             event:dict
         ):
-        """
-        """
         ### event time
         event_time=event.get("eventTime")
         event_time=self.convert_event_time_to_unix_timestmap(event_time=event_time) # unix timestamp
 
         objects=set()
+
         ### epcList
         for epc in event.get("epcList",[]):
             self.graph.add_node(
