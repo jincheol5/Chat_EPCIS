@@ -1,26 +1,42 @@
-from datetime import datetime
+from datetime import datetime,timezone
 from typing import Any,Literal
-from module import Neo4j_Interface
 
 class OTG:
     """
     Object Traceability Graph
     """
-    def __init__(self,graph_db:Neo4j_Interface):
-        self.graph_db=graph_db
+    def __init__(self):
+        pass
 
     def convert_event_time_to_unix_timestmap(self,
             event_time:str
         ):
         """
         밀리초(ms) 단위 unix timestamp로 변환
+
+        ISO 8601 형식의 event_time을
+        밀리초(ms) 단위 Unix timestamp로 변환합니다.
+
+        예:
+            2024-01-01T11:30:46Z
+            2024-01-01T11:30:46+00:00
+            2024-01-01T20:30:46+09:00
         """
-        timestamp_ms=int(
-            datetime.fromisoformat(
-                event_time
-            ).timestamp()*1000
+        normalized_event_time=event_time.strip()
+        # Python 버전과 관계없이 UTC를 나타내는 Z 처리
+        if normalized_event_time.endswith("Z"):
+            normalized_event_time = (
+                normalized_event_time[:-1] + "+00:00"
+            )
+        event_datetime=datetime.fromisoformat(
+            normalized_event_time
         )
-        return timestamp_ms
+        # 시간대 정보가 없으면 UTC로 간주
+        if event_datetime.tzinfo is None:
+            event_datetime=event_datetime.replace(
+                tzinfo=timezone.utc
+            )
+        return int(event_datetime.timestamp() * 1000)
 
     def create_node_dict(self,
             node_id:str,

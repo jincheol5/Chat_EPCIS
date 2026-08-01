@@ -7,7 +7,8 @@ class Neo4j_Interface:
     def __init__(self,port:int=7687):
         try:
             self.driver=GraphDatabase.driver(
-                f"neo4j://127.0.0.1:{port}"
+                f"neo4j://127.0.0.1:{port}",
+                auth=None
             )
             self.driver.verify_connectivity()
             print("Neo4j 연결 성공")
@@ -91,7 +92,7 @@ class Neo4j_Interface:
             for node_type,node_list in nodes_by_type.items():
                 query=f"""
                     UNWIND $node_list AS node
-                    MERGE (n:`{node_type}` {{id: node.id}})
+                    MERGE (n:`{node_type}` {{id: node.node_id}})
                     SET n += node.properties
                     RETURN n
                 """
@@ -108,6 +109,7 @@ class Neo4j_Interface:
                     raise RuntimeError(
                         f"Neo4j 쿼리 실행 실패: {e}"
                     ) from e
+        print(f"nodes input successful!")
         return created_nodes
 
     def add_edge_event(self,
@@ -218,4 +220,5 @@ class Neo4j_Interface:
                     raise RuntimeError(
                         f"Neo4j 쿼리 실행 실패: {e}"
                     ) from e
+        print(f"edge_events input successful!")
         return created_edges
