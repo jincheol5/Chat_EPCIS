@@ -31,6 +31,18 @@ class Neo4j_Interface:
             self.driver=None
             print("Neo4j database disconnected!")
 
+    def delete_graph(self):
+        """
+        Neo4j의 모든 노드와 관계를 삭제
+        """
+        query=f"""
+            MATCH (n)
+            DETACH DELETE n;
+        """
+        with self.driver.session() as session:
+            session.run(query).consume()
+        print(f"Delete all graph elements.")
+
     def add_node(self,
             node_id:str,
             node_type:Literal["class","instance","location"],
@@ -222,3 +234,83 @@ class Neo4j_Interface:
                     ) from e
         print(f"edge_events input successful!")
         return created_edges
+
+    def get_num_graph_elements(self,
+            node_type:str=None,
+            edge_type:str=None
+        ):
+        """
+        """
+        node_pattern=(
+            f"(n:`{node_type}`)"
+            if node_type is not None
+            else "(n)"
+        )
+        edge_pattern=(
+            f"()-[r:`{edge_type}`]->()"
+            if edge_type is not None
+            else "()-[r]->()"
+        )
+
+        query=f"""
+            CALL {{
+                MATCH {node_pattern}
+                RETURN count(n) AS node_count
+            }}
+            CALL {{
+                MATCH {edge_pattern}
+                RETURN count(r) AS edge_count
+            }}
+            RETURN node_count, edge_count
+        """
+        with self.driver.session() as session:
+            record=session.run(query).single()
+            if record is None:
+                return {
+                    "n_node": 0,
+                    "n_edge": 0,
+                }
+            return {
+                "n_node": record["node_count"],
+                "n_edge": record["edge_count"],
+            }
+
+    def get_node_degree(self,
+            node_id:str,
+            direct:Literal[
+                "in",
+                "out",
+                "all"
+            ]="all"
+        )->int:
+        """
+        특정 노드의 degree를 반환합니다.
+
+        Return:
+            degree of node: int
+        """
+        if direct=="in":
+            relation_pattern=f"<-[r]-()"
+        elif direct=="out":
+            relation_pattern=f"-[r]->()"
+        elif direct=="all":
+            relation_pattern=f"-[r]-()"
+        else:
+            raise ValueError(
+                f"direct는 'in', 'out', 'all' 중 하나여야 합니다: {direct}"
+            )
+
+        query=f"""
+            MATCH (n {{id: $node_id}})
+            OPTIONAL MATCH (n){relation_pattern}
+            RETURN count(r) AS degree
+        """
+
+        with self.driver.session() as session:
+            record=session.run(
+                query,
+                node_id=node_id,
+            ).single()
+            if record is None:
+                return 0
+            return record["degree"]

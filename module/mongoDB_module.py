@@ -49,17 +49,60 @@ class MongoDB_Interface:
         except PyMongoError as e:
             print(f"{data_type} type data list insert error: {e}")
 
-    def find_events(self):
-        return list(self.event_collection.find())
+    def find_event_by_id(self,
+            event_id:str
+        )->dict[str,Any]|None:
+        event=self.event_collection.find_one({"_id":event_id})
+        if event is None:
+            return None
+        return event
 
-    def find_events_by_filter(self,query:dict[str,Any]):
-        return list(self.event_collection.find(query))
+    def find_events(self,
+            limit:int|None=None
+        ):
+        """
+        """
+        cursor=self.event_collection.find()
+        if limit is not None:
+            if limit<1:
+                raise ValueError("limit은 1 이상의 정수여야 합니다.")
+            cursor=cursor.limit(limit)
+        return list(cursor)
+
+    def find_events_by_filter(self,
+            query:dict[str,Any],
+            limit:int|None=None
+        ):
+        """
+        query에 MongoDB 조회 조건을 전달.
+
+        ex:
+            query={"type":"ObjectEvent"}
+        """
+        cursor=self.event_collection.find(query)
+        if limit is not None:
+            if limit<1:
+                raise ValueError("limit은 1 이상의 정수여야 합니다.")
+            cursor=cursor.limit(limit)
+        return list(cursor)
 
     def find_distinct_event_values(self,field_name:str):
+        """
+        전달한 필드에서 중복되지 않은 값들만 조회.
+        """
         values=self.event_collection.distinct(field_name)
         return sorted(value for value in values if value is not None)
 
     def find_event_types(self):
+        """
+        반환 예시:
+            [
+                "AggregationEvent",
+                "AssociationEvent",
+                "ObjectEvent",
+                "TransformationEvent"
+            ]
+        """
         return self.find_distinct_event_values("type")
 
     def find_biz_steps(self):
@@ -86,39 +129,81 @@ class MongoDB_Interface:
         epcs.discard(None)
         return sorted(epcs)
 
-    def find_events_by_event_type(self,event_type:str):
-        return self.find_events_by_filter({"type":event_type})
+    def find_events_by_event_type(self,
+            event_type:Literal[
+                "ObjectEvent",
+                "AggregationEvent",
+                "TransformationEvent",
+                "TransactionEvent",
+                "AssociationEvent"
+            ],
+            limit:int|None=None
+        ):
+        return self.find_events_by_filter(
+            query={
+                "type":event_type
+            },
+            limit=limit
+        )
 
-    def find_events_by_biz_step(self,biz_step:str):
-        return self.find_events_by_filter({"bizStep":biz_step})
+    def find_events_by_biz_step(self,
+            biz_step:str,
+            limit:int|None=None
+        ):
+        return self.find_events_by_filter(
+            query={
+                "bizStep":biz_step
+            },
+            limit=limit
+        )
 
-    def find_events_by_biz_location(self,biz_location:str):
-        return self.find_events_by_filter({"bizLocation.id":biz_location})
+    def find_events_by_biz_location(self,
+            biz_location:str,
+            limit:int|None=None
+        ):
+        return self.find_events_by_filter(
+            query={
+                "bizLocation.id":biz_location
+            },
+            limit=limit
+        )
 
-    def find_events_by_read_point(self,read_point:str):
-        return self.find_events_by_filter({"readPoint.id":read_point})
+    def find_events_by_read_point(self,
+            read_point:str,
+            limit:int|None=None
+        ):
+        return self.find_events_by_filter(
+            query={
+                "readPoint.id":read_point
+            },
+            limit=limit
+        )
 
-    def find_events_by_disposition(self,disposition:str):
-        return self.find_events_by_filter({"disposition":disposition})
+    def find_events_by_disposition(self,
+            disposition:str,
+            limit:int|None=None
+        ):
+        return self.find_events_by_filter(
+            query={
+                "disposition":disposition
+            },
+            limit=limit
+        )
 
-    def find_events_by_epc(self,epc:str):
+    def find_events_by_epc(self,
+            epc:str,
+            limit:int|None=None
+        ):
         fields=(
             "parentID","epcList","childEPCs","inputEPCList","outputEPCList",
             "quantityList.epcClass","childQuantityList.epcClass",
             "inputQuantityList.epcClass","outputQuantityList.epcClass",
         )
-        return self.find_events_by_filter({"$or":[{field:epc} for field in fields]})
+        return self.find_events_by_filter(
+            query={
+                "$or":[{field:epc} for field in fields]
+            },
+            limit=limit
+        )
 
-    def find_event_by_id(self,event_id:str):
-        event=self.event_collection.find_one({"_id":event_id})
-        if event is None:
-            return None
-        return event
-
-    def find_events_by_event_id(self,event_id:str):
-        return self.find_events_by_filter({
-            "$or":[
-                {"eventID":event_id},
-                {"errorDeclaration.correctiveEventIDs":event_id}
-            ]
-        })
+    
