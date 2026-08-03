@@ -1,4 +1,4 @@
-from typing import TypedDict
+from langgraph.graph import MessagesState
 
-class GraphState(TypedDict):
-    message:str
+class AgentState(MessagesState):
+    pass

@@ -8,7 +8,7 @@ class Neo4j_Interface:
         try:
             self.driver=GraphDatabase.driver(
                 f"neo4j://127.0.0.1:{port}",
-                auth=None
+                auth=("neo4j","11111111")
             )
             self.driver.verify_connectivity()
             print("Neo4j 연결 성공")
@@ -18,7 +18,8 @@ class Neo4j_Interface:
     def connect_db(self,port:int=7687):
         try:
             self.driver=GraphDatabase.driver(
-                f"neo4j://127.0.0.1:{port}"
+                f"neo4j://127.0.0.1:{port}",
+                auth=("neo4j","11111111")
             )
             self.driver.verify_connectivity()
             print("Neo4j 연결 성공")

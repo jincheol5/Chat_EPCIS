@@ -1,27 +1,54 @@
-from langgraph.graph import END, START, StateGraph
+from langgraph.graph import StateGraph,START,END
+from langgraph.prebuilt import ToolNode,tools_condition
+from .state import AgentState
+from .node import AgentNode
+from tool import *
 
-from agent.state import GraphState
+class ChatEPCIS:
+    def __init__(self,
+            model_name:str,
+            port:int=11434
+        ):
+        mongoDB_tools=[
+            tool_get_epcis_event_by_id,
+            tool_get_epcis_event_by_event_type
+        ]
+        neo4j_tools=[
+            tool_get_num_graph_elements,
+            tool_get_node_degree
+        ]
+        self.tools=mongoDB_tools+neo4j_tools
+        self.agent_node=AgentNode(
+            model_name=model_name,
+            port=port,
+            tools=self.tools
+        )
 
-
-def process_message(state: GraphState) -> GraphState:
-    """입력 메시지를 간단히 처리하는 그래프 노드입니다."""
-    return {"message": f"LangGraph가 처리한 메시지: {state['message']}"}
-
-
-def build_graph():
-    """간단한 LangGraph 워크플로를 생성하고 컴파일합니다."""
-    workflow = StateGraph(GraphState)
-
-    workflow.add_node("process_message", process_message)
-    workflow.add_edge(START, "process_message")
-    workflow.add_edge("process_message", END)
-
-    return workflow.compile()
-
-
-graph = build_graph()
-
-
-if __name__ == "__main__":
-    result = graph.invoke({"message": "안녕하세요!"})
-    print(result["message"])
+    def get_agent(self):
+        graph_builder=StateGraph(AgentState)
+        graph_builder.add_node(
+            "llm_node",
+            self.agent_node.llm_node
+        )
+        graph_builder.add_node(
+            "tool_node",
+            ToolNode(self.tools)
+        )
+        graph_builder.add_edge(
+            START,
+            "llm_node",
+        )
+        graph_builder.add_conditional_edges(
+            "llm_node",
+            tools_condition,
+            {
+                "tools":"tool_node",
+                "__end__": END,
+            },
+        )
+        graph_builder.add_edge(
+            "tool_node",
+            "llm_node",
+        )
+        agent=graph_builder.compile()
+        return agent
