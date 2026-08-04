@@ -40,6 +40,7 @@ class OTG:
 
     def create_node_dict(self,
             node_id:str,
+            graph_id:str,
             node_type:Literal["class","instance","location"],
             **properties
         )->dict[str,Any]:
@@ -47,12 +48,14 @@ class OTG:
         shape:
             {
                 "node_id":value,
+                "graph_id":value,
                 "node_type":value,
                 "properties":{key:value,...}
             }
         """
         return {
             "node_id":node_id,
+            "graph_id":graph_id,
             "node_type":node_type,
             "properties":properties
         }
@@ -60,6 +63,7 @@ class OTG:
     def create_edge_event_dict(self,
             src_id:str,
             dst_id:str,
+            graph_id:str,
             event_time:int,
             edge_type:Literal[
                 "isLocatedIn",
@@ -75,6 +79,7 @@ class OTG:
                 {
                     "src_id":value,
                     "dst_id":value,
+                    "graph_id":value,
                     "event_time":value,
                     "edge_type":value,
                     "properties":{key:value,...}
@@ -83,13 +88,15 @@ class OTG:
         return {
             "src_id":src_id,
             "dst_id":dst_id,
+            "graph_id":graph_id,
             "event_time":event_time,
             "edge_type":edge_type,
             "properties":properties
         }
 
     def transform_other_event_to_graph(self,
-            event:dict
+            event:dict,
+            graph_id:str
         ):
         """
         Transform ObjectEvent,TransactionEvent to graph
@@ -107,6 +114,7 @@ class OTG:
         for epc in event.get("epcList",[]):
             node=self.create_node_dict(
                 node_id=epc,
+                graph_id=graph_id,
                 node_type="instance"
             )
             nodes.append(node)
@@ -123,6 +131,7 @@ class OTG:
             }
             node=self.create_node_dict(
                 node_id=epc_class,
+                graph_id=graph_id,
                 node_type="class",
                 **properties
             )
@@ -135,6 +144,7 @@ class OTG:
             read_point_id=read_point.get("id")
             node=self.create_node_dict(
                 node_id=read_point_id,
+                graph_id=graph_id,
                 node_type="location"
             )
             nodes.append(node)
@@ -142,6 +152,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=obj,
                     dst_id=read_point_id,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="isLocatedIn"
                 )
@@ -153,6 +164,7 @@ class OTG:
             biz_location_id=biz_location.get("id")
             node=self.create_node_dict(
                 node_id=biz_location_id,
+                graph_id=graph_id,
                 node_type="location"
             )
             nodes.append(node)
@@ -160,6 +172,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=obj,
                     dst_id=biz_location_id,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="isLocatedIn"
                 )
@@ -170,7 +183,8 @@ class OTG:
         }
 
     def transform_aggregation_event_to_graph(self,
-            event:dict
+            event:dict,
+            graph_id:str
         ):
         """
         Transform AggregationEvent to graph
@@ -189,6 +203,7 @@ class OTG:
         if parent_id is not None:
             node=self.create_node_dict(
                 node_id=parent_id,
+                graph_id=graph_id,
                 node_type="instance" # AggregationEvent의 parentID는 원칙적으로 instance 
             )
             nodes.append(node)
@@ -197,6 +212,7 @@ class OTG:
         for child_epc in event.get("childEPCs",[]):
             node=self.create_node_dict(
                 node_id=child_epc,
+                graph_id=graph_id,
                 node_type="instance"
             )
             nodes.append(node)
@@ -213,6 +229,7 @@ class OTG:
             }
             node=self.create_node_dict(
                 node_id=epc_class,
+                graph_id=graph_id,
                 node_type="class",
                 **properties
             )
@@ -225,6 +242,7 @@ class OTG:
             read_point_id=read_point.get("id")
             node=self.create_node_dict(
                 node_id=read_point_id,
+                graph_id=graph_id,
                 node_type="location"
             )
             nodes.append(node)
@@ -232,6 +250,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=obj,
                     dst_id=read_point_id,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="isLocatedIn"
                 )
@@ -243,6 +262,7 @@ class OTG:
             biz_location_id=biz_location.get("id")
             node=self.create_node_dict(
                 node_id=biz_location_id,
+                graph_id=graph_id,
                 node_type="location"
             )
             nodes.append(node)
@@ -250,6 +270,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=obj,
                     dst_id=biz_location_id,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="isLocatedIn"
                 )
@@ -264,6 +285,7 @@ class OTG:
             edge_event=self.create_edge_event_dict(
                 src_id=parent_id,
                 dst_id=obj,
+                graph_id=graph_id,
                 event_time=event_time,
                 edge_type="contains",
                 **properties
@@ -276,7 +298,8 @@ class OTG:
         }
 
     def transform_transformation_event_to_graph(self,
-            event:dict
+            event:dict,
+            graph_id:str
         ):
         """
         Transform TransformationEvent to graph
@@ -296,6 +319,7 @@ class OTG:
         for input_epc in event.get("inputEPCList",[]):
             node=self.create_node_dict(
                 node_id=input_epc,
+                graph_id=graph_id,
                 node_type="instance"
             )
             nodes.append(node)
@@ -313,6 +337,7 @@ class OTG:
             }
             node=self.create_node_dict(
                 node_id=epc_class,
+                graph_id=graph_id,
                 node_type="class",
                 **properties
             )
@@ -324,6 +349,7 @@ class OTG:
         for output_epc in event.get("outputEPCList",[]):
             node=self.create_node_dict(
                 node_id=output_epc,
+                graph_id=graph_id,
                 node_type="instance"
             )
             nodes.append(node)
@@ -341,6 +367,7 @@ class OTG:
             }
             node=self.create_node_dict(
                 node_id=epc_class,
+                graph_id=graph_id,
                 node_type="class",
                 **properties
             )
@@ -354,6 +381,7 @@ class OTG:
             read_point_id=read_point.get("id")
             node=self.create_node_dict(
                 node_id=read_point_id,
+                graph_id=graph_id,
                 node_type="location"
             )
             nodes.append(node)
@@ -361,6 +389,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=obj,
                     dst_id=read_point_id,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="isLocatedIn"
                 )
@@ -372,6 +401,7 @@ class OTG:
             biz_location_id=biz_location.get("id")
             node=self.create_node_dict(
                 node_id=biz_location_id,
+                graph_id=graph_id,
                 node_type="location"
             )
             nodes.append(node)
@@ -379,6 +409,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=obj,
                     dst_id=biz_location_id,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="isLocatedIn"
                 )
@@ -390,6 +421,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=input_obj,
                     dst_id=output_obj,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="transformTo",
                 )
@@ -400,7 +432,8 @@ class OTG:
         }
 
     def transform_association_event_to_graph(self,
-            event:dict
+            event:dict,
+            graph_id:str
         ):
         """
         Transform AssociationEvent to graph
@@ -419,6 +452,7 @@ class OTG:
         if parent_id is not None:
             node=self.create_node_dict(
                 node_id=parent_id,
+                graph_id=graph_id,
                 node_type="instance" # AssociationEvent의 parentID는 원칙적으로 instance 
             )
             nodes.append(node)
@@ -427,6 +461,7 @@ class OTG:
         for child_epc in event.get("childEPCs",[]):
             node=self.create_node_dict(
                 node_id=child_epc,
+                graph_id=graph_id,
                 node_type="instance"
             )
             nodes.append(node)
@@ -443,6 +478,7 @@ class OTG:
             }
             node=self.create_node_dict(
                 node_id=epc_class,
+                graph_id=graph_id,
                 node_type="class",
                 **properties
             )
@@ -455,6 +491,7 @@ class OTG:
             read_point_id=read_point.get("id")
             node=self.create_node_dict(
                 node_id=read_point_id,
+                graph_id=graph_id,
                 node_type="location"
             )
             nodes.append(node)
@@ -462,6 +499,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=obj,
                     dst_id=read_point_id,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="isLocatedIn"
                 )
@@ -473,6 +511,7 @@ class OTG:
             biz_location_id=biz_location.get("id")
             node=self.create_node_dict(
                 node_id=biz_location_id,
+                graph_id=graph_id,
                 node_type="location"
             )
             nodes.append(node)
@@ -480,6 +519,7 @@ class OTG:
                 edge_event=self.create_edge_event_dict(
                     src_id=obj,
                     dst_id=biz_location_id,
+                    graph_id=graph_id,
                     event_time=event_time,
                     edge_type="isLocatedIn"
                 )
@@ -494,6 +534,7 @@ class OTG:
             edge_event=self.create_edge_event_dict(
                 src_id=parent_id,
                 dst_id=obj,
+                graph_id=graph_id,
                 event_time=event_time,
                 edge_type="isAssociatedWith",
                 **properties
@@ -506,7 +547,8 @@ class OTG:
         }
 
     def transform_epcis_events_to_graph(self,
-            events:list[dict]
+            events:list[dict],
+            graph_id:str
         ):
         """
         Transform EPCIS Events to graph
@@ -517,19 +559,19 @@ class OTG:
             event_type=event.get("type")
             match event_type:
                 case "ObjectEvent"|"TransactionEvent":
-                    graph_elements=self.transform_other_event_to_graph(event=event)
+                    graph_elements=self.transform_other_event_to_graph(event=event,graph_id=graph_id)
                     nodes+=graph_elements["nodes"]
                     edge_events+=graph_elements["edge_events"]
                 case "AggregationEvent":
-                    graph_elements=self.transform_aggregation_event_to_graph(event=event)
+                    graph_elements=self.transform_aggregation_event_to_graph(event=event,graph_id=graph_id)
                     nodes+=graph_elements["nodes"]
                     edge_events+=graph_elements["edge_events"]
                 case "TransformationEvent":
-                    graph_elements=self.transform_transformation_event_to_graph(event=event)
+                    graph_elements=self.transform_transformation_event_to_graph(event=event,graph_id=graph_id)
                     nodes+=graph_elements["nodes"]
                     edge_events+=graph_elements["edge_events"]
                 case "AssociationEvent":
-                    graph_elements=self.transform_association_event_to_graph(event=event)
+                    graph_elements=self.transform_association_event_to_graph(event=event,graph_id=graph_id)
                     nodes+=graph_elements["nodes"]
                     edge_events+=graph_elements["edge_events"]
         return {

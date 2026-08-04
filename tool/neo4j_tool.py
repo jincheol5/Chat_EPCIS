@@ -6,6 +6,7 @@ neo4j_interface=Neo4j_Interface()
 
 @tool
 def tool_get_num_graph_elements(
+        graph_id:str,
         node_type:str|None=None,
         edge_type:str|None=None
     )->dict[str,int]:
@@ -27,6 +28,7 @@ def tool_get_num_graph_elements(
             }
     """
     return neo4j_interface.get_num_graph_elements(
+        graph_id=graph_id,
         node_type=node_type,
         edge_type=edge_type
     )
@@ -34,7 +36,8 @@ def tool_get_num_graph_elements(
 
 @tool
 def tool_get_node_degree(
-        node_id:int,
+        node_id:str,
+        graph_id:str,
         direct:Literal[
             "in",
             "out",
@@ -50,5 +53,6 @@ def tool_get_node_degree(
     """
     return neo4j_interface.get_node_degree(
         node_id=node_id,
+        graph_id=graph_id,
         direct=direct
     )

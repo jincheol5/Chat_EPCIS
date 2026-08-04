@@ -32,20 +32,31 @@ class Neo4j_Interface:
             self.driver=None
             print("Neo4j database disconnected!")
 
-    def delete_graph(self):
+    def delete_graph(self,
+            graph_id:str
+        ):
         """
-        Neo4j의 모든 노드와 관계를 삭제
+        Neo4j의 특정 graph의 노드와 관계를 삭제
         """
         query=f"""
-            MATCH (n)
+            MATCH (n {{graph_id: $graph_id}})
             DETACH DELETE n;
         """
         with self.driver.session() as session:
-            session.run(query).consume()
-        print(f"Delete all graph elements.")
+            session.run(query,graph_id=graph_id).consume()
+        print(f"Delete graph elements: {graph_id}")
+
+    def delete_specific_graph(self,
+            graph_id:str
+        ):
+        """
+        Neo4j의 특정 graph의 노드와 관계를 삭제
+        """
+        self.delete_graph(graph_id=graph_id)
 
     def add_node(self,
             node_id:str,
+            graph_id:str,
             node_type:Literal["class","instance","location"],
             **properties
         ):
@@ -60,8 +71,9 @@ class Neo4j_Interface:
             properties: 노드 속성 키-값
         """
         query=f"""
-            MERGE (n:`{node_type}` {{id: $node_id}})
+            MERGE (n:`{node_type}` {{id: $node_id, graph_id: $graph_id}})
             SET n += $properties
+            SET n.graph_id = $graph_id
             RETURN n
         """
 
@@ -69,6 +81,7 @@ class Neo4j_Interface:
             result=session.run(
                 query,
                 node_id=node_id,
+                graph_id=graph_id,
                 properties=properties,
             )
             record=result.single() # return 결과에서 레코드 한 개만 가져옴
@@ -77,6 +90,7 @@ class Neo4j_Interface:
             return record["n"]
 
     def add_nodes(self,
+            graph_id:str,
             nodes:list[dict]
         ):
         """
@@ -105,13 +119,18 @@ class Neo4j_Interface:
             for node_type,node_list in nodes_by_type.items():
                 query=f"""
                     UNWIND $node_list AS node
-                    MERGE (n:`{node_type}` {{id: node.node_id}})
+                    MERGE (n:`{node_type}` {{
+                        id: node.node_id,
+                        graph_id: $graph_id
+                    }})
                     SET n += node.properties
+                    SET n.graph_id = $graph_id
                     RETURN n
                 """
                 try:
                     result=session.run(
                         query,
+                        graph_id=graph_id,
                         node_list=node_list,
                     )
                     created_nodes.extend(
@@ -128,6 +147,7 @@ class Neo4j_Interface:
     def add_edge_event(self,
             src_id:str,
             dst_id:str,
+            graph_id:str,
             event_time:int,
             edge_type:Literal[
                 "isLocatedIn",
@@ -153,10 +173,14 @@ class Neo4j_Interface:
         """
 
         query=f"""
-            MATCH (src {{id: $src_id}})
-            MATCH (dst {{id: $dst_id}})
-            MERGE (src)-[r:`{edge_type}` {{event_time: $event_time}}]->(dst)
+            MATCH (src {{id: $src_id, graph_id: $graph_id}})
+            MATCH (dst {{id: $dst_id, graph_id: $graph_id}})
+            MERGE (src)-[r:`{edge_type}` {{
+                event_time: $event_time,
+                graph_id: $graph_id
+            }}]->(dst)
             SET r += $properties
+            SET r.graph_id = $graph_id
             RETURN r
         """
 
@@ -165,6 +189,7 @@ class Neo4j_Interface:
                 query,
                 src_id=src_id,
                 dst_id=dst_id,
+                graph_id=graph_id,
                 event_time=event_time,
                 properties=properties
             )
@@ -174,6 +199,7 @@ class Neo4j_Interface:
             return record["r"]
 
     def add_edge_events(self,
+            graph_id:str,
             edge_events:list[dict]
         ):
         """
@@ -212,17 +238,20 @@ class Neo4j_Interface:
             for edge_type,edge_list in edge_events_by_type.items():
                 query=f"""
                     UNWIND $edge_list AS edge
-                    MATCH (src {{id: edge.src_id}})
-                    MATCH (dst {{id: edge.dst_id}})
+                    MATCH (src {{id: edge.src_id, graph_id: $graph_id}})
+                    MATCH (dst {{id: edge.dst_id, graph_id: $graph_id}})
                     MERGE (src)-[r:`{edge_type}` {{
-                        event_time: edge.event_time
+                        event_time: edge.event_time,
+                        graph_id: $graph_id
                     }}]->(dst)
                     SET r += edge.properties
+                    SET r.graph_id = $graph_id
                     RETURN r
                 """
                 try:
                     result=session.run(
                         query,
+                        graph_id=graph_id,
                         edge_list=edge_list,
                     )
                     created_edges.extend(
@@ -237,6 +266,7 @@ class Neo4j_Interface:
         return created_edges
 
     def get_num_graph_elements(self,
+            graph_id:str,
             node_type:str=None,
             edge_type:str=None
         ):
@@ -256,16 +286,18 @@ class Neo4j_Interface:
         query=f"""
             CALL {{
                 MATCH {node_pattern}
+                WHERE n.graph_id = $graph_id
                 RETURN count(n) AS node_count
             }}
             CALL {{
                 MATCH {edge_pattern}
+                WHERE r.graph_id = $graph_id
                 RETURN count(r) AS edge_count
             }}
             RETURN node_count, edge_count
         """
         with self.driver.session() as session:
-            record=session.run(query).single()
+            record=session.run(query,graph_id=graph_id).single()
             if record is None:
                 return {
                     "n_node": 0,
@@ -278,6 +310,7 @@ class Neo4j_Interface:
 
     def get_node_degree(self,
             node_id:str,
+            graph_id:str,
             direct:Literal[
                 "in",
                 "out",
@@ -302,8 +335,9 @@ class Neo4j_Interface:
             )
 
         query=f"""
-            MATCH (n {{id: $node_id}})
+            MATCH (n {{id: $node_id, graph_id: $graph_id}})
             OPTIONAL MATCH (n){relation_pattern}
+            WHERE r.graph_id = $graph_id
             RETURN count(r) AS degree
         """
 
@@ -311,7 +345,96 @@ class Neo4j_Interface:
             record=session.run(
                 query,
                 node_id=node_id,
+                graph_id=graph_id,
             ).single()
             if record is None:
                 return 0
             return record["degree"]
+
+    def get_trace_events(self,
+            node_id:str,
+            graph_id:str,
+            direction:Literal[
+                "forward",
+                "backward",
+                "both",
+            ],
+            max_depth:int|None=5
+        )->list[str]:
+        """
+        특정 노드에서 시작하여 관련 노드 ID를 추적.
+        시작 노드 ID도 반환 목록에 포함.
+        시작 노드에서 갈 수 있는 경로를 Neo4j가 한꺼번에 찾고, 그중 방향과 시간 순서가 올바른 경로만 남김.
+        direction이 both이면 forward 또는 backward 조건을 만족하는 노드를 함께 조회하고 중복을 제거.
+        하나의 Cypher 쿼리로 시간 순서를 유지하며 관련 노드 ID를 탐색.
+        시작 노드에서 최대 깊이까지 가능한 경로를 찾은 뒤, 경로 전체가 방향과 시간 조건을 만족하는지 검사.
+
+        forward:
+            transformTo: input -> output
+            contains/isAssociatedWith: child -> parent
+        backward:
+            transformTo: output -> input
+            contains/isAssociatedWith: parent -> child
+        """
+        path_range="0.." if max_depth is None else f"0..{max_depth}"
+        forward_condition="""
+            all(i IN range(0,size(relationships(path))-1) WHERE
+                (type(relationships(path)[i]) = 'transformTo'
+                    AND startNode(relationships(path)[i]) = nodes(path)[i])
+                OR
+                (type(relationships(path)[i]) IN ['contains','isAssociatedWith']
+                    AND endNode(relationships(path)[i]) = nodes(path)[i])
+            )
+            AND all(i IN range(0,size(relationships(path))-2) WHERE
+                relationships(path)[i].event_time
+                    < relationships(path)[i+1].event_time
+            )
+        """
+        backward_condition="""
+            all(i IN range(0,size(relationships(path))-1) WHERE
+                (type(relationships(path)[i]) = 'transformTo'
+                    AND endNode(relationships(path)[i]) = nodes(path)[i])
+                OR
+                (type(relationships(path)[i]) IN ['contains','isAssociatedWith']
+                    AND startNode(relationships(path)[i]) = nodes(path)[i])
+            )
+            AND all(i IN range(0,size(relationships(path))-2) WHERE
+                relationships(path)[i].event_time
+                    > relationships(path)[i+1].event_time
+            )
+        """
+
+        if direction=="forward":
+            trace_condition=forward_condition
+        elif direction=="backward":
+            trace_condition=backward_condition
+        else:
+            trace_condition=(
+                f"(({forward_condition}) OR ({backward_condition}))"
+            )
+
+        query=f"""
+            MATCH path=(start {{
+                id: $node_id,
+                graph_id: $graph_id
+            }})-[*{path_range}]-(target {{graph_id: $graph_id}})
+            WHERE all(relation IN relationships(path) WHERE
+                relation.graph_id = $graph_id
+            )
+                AND ({trace_condition})
+            WITH target.id AS node_id,
+                min(length(path)) AS depth
+            RETURN node_id
+            ORDER BY depth ASC,node_id ASC
+        """
+        with self.driver.session() as session:
+            result=session.run(
+                query,
+                node_id=node_id,
+                graph_id=graph_id,
+            )
+            return [
+                record["node_id"]
+                for record in result
+                if record["node_id"] is not None
+            ]

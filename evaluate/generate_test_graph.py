@@ -1,13 +1,10 @@
 from module import MongoDB_Interface,Neo4j_Interface
 from graph import OTG
 
-"""
-<< App >>
-"""
-def app():
+def convert_to_graph():
     """
     """
-    mongodb_interface=MongoDB_Interface()
+    mongodb_interface=MongoDB_Interface(isEvaluated=True)
     neo4j_interface=Neo4j_Interface()
     graph=OTG()
 
@@ -15,7 +12,7 @@ def app():
     epcis_events=mongodb_interface.find_events()
 
     ### 2. convert to Object traceability graph
-    graph_id=f"synthetic-food-supply-chain-dataset"
+    graph_id=f"test_graph"
     graph_elements=graph.transform_epcis_events_to_graph(events=epcis_events,graph_id=graph_id)
     nodes=graph_elements["nodes"]
     edge_events=graph_elements["edge_events"]
@@ -25,7 +22,4 @@ def app():
     neo4j_interface.add_edge_events(graph_id=graph_id,edge_events=edge_events)
 
 if __name__=="__main__":
-    """
-    Execute app
-    """
-    app()
+    convert_to_graph()
