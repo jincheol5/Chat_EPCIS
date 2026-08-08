@@ -14,7 +14,7 @@ EPCIS (Electronic Product Code Information Services)는 공급망에서 제품�
 
 EPCIS의 목표는 서로 다른 애플리케이션들이 기업 내부 및 기업 간에 가시성 이벤트 데이터를 생성하고 공유할 수 있도록 하는 것입니다.
 
-[공식문서](https://www.gs1.org/standards/epcis)
+[EPCIS 2.0 공식문서](https://www.gs1.org/standards/epcis)
 
 # What is Chat EPCIS?
 Chat EPCIS는 LLM 및 Graph 모델링 기반 대화형 공급망 국제 표준 GS1 EPCIS 데이터 플랫폼입니다.
