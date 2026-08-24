@@ -1,6 +1,6 @@
 from langchain_core.messages import SystemMessage
 from langchain_ollama import ChatOllama
-from .state import AgentState
+from langgraph.graph import MessagesState
 from .prompt import Prompt
 
 class AgentNode:
@@ -16,8 +16,14 @@ class AgentNode:
         )
         self.llm=self.llm.bind_tools(tools)
 
+    def router_node(self,
+            state:MessagesState
+        ):
+        """
+        """
+
     def llm_node(self,
-            state:AgentState
+            state:MessagesState
         ):
         response=self.llm.invoke(
             [

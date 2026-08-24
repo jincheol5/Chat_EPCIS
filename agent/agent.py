@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph,START,END
+from langgraph.graph import MessagesState
 from langgraph.prebuilt import ToolNode,tools_condition
-from .state import AgentState
 from .node import AgentNode
 from tool import *
 
@@ -25,7 +25,7 @@ class ChatEPCIS:
         )
 
     def get_agent(self):
-        graph_builder=StateGraph(AgentState)
+        graph_builder=StateGraph(MessagesState)
         graph_builder.add_node(
             "llm_node",
             self.agent_node.llm_node
