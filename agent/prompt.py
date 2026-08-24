@@ -85,3 +85,8 @@ class Prompt:
         Answer general questions that do not require querying the EPCIS MongoDB or Neo4j databases.
         """
     )
+
+    FINAL_ANSWER_SYSTEM_PROMPT=textwrap.dedent(
+        """
+        """
+    )
