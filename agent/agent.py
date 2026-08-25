@@ -1,5 +1,4 @@
 from langgraph.graph import StateGraph,START,END
-from langgraph.graph import MessagesState
 from langgraph.prebuilt import ToolNode,tools_condition
 from .node import *
 from .state import ChatEPCISState
@@ -33,10 +32,6 @@ class ChatEPCIS:
             model_name=model_name,
             ollama_port=ollama_port,
             tools=self.graph_tool_list
-        )
-        self.basic_agent_node=Basic_Agent_Node(
-            model_name=model_name,
-            ollama_port=ollama_port
         )
         self.final_answer_node=Final_Answer_Node(
             model_name=model_name,
@@ -72,10 +67,6 @@ class ChatEPCIS:
             ToolNode(self.graph_tool_list)
         )
         graph_builder.add_node(
-            "basic_agent",
-            self.basic_agent_node.agent
-        )
-        graph_builder.add_node(
             "final_answer",
             self.final_answer_node.final_answer
         )
@@ -95,7 +86,6 @@ class ChatEPCIS:
             {
                 "event_agent":"event_agent",
                 "graph_agent":"graph_agent",
-                "basic_agent":"basic_agent",
                 "final_answer":"final_answer",
             }
         )
@@ -122,10 +112,6 @@ class ChatEPCIS:
         graph_builder.add_edge( # Tool 실행 후 다시 graph Agent
             "graph_tools",
             "graph_agent"
-        )
-        graph_builder.add_edge(
-            "basic_agent",
-            "agent_manager"
         )
         graph_builder.add_edge(
             "final_answer",

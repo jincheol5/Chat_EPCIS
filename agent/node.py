@@ -115,30 +115,6 @@ class Graph_Agent_Node:
             "messages":[response]
         }
 
-class Basic_Agent_Node:
-    def __init__(
-            self,
-            model_name:str="gemma4",
-            ollama_port:int=11434
-        ):
-        self.llm=ChatOllama(
-            model=model_name,
-            base_url=f"http://127.0.0.1:{ollama_port}",
-            temperature=0,
-        )
-
-    def agent(
-            self,
-            state:ChatEPCISState
-        ):
-        response=self.llm.invoke([
-            SystemMessage(content=Prompt.BASIC_AGENT_SYSTEM_PROMPT),
-            *state["messages"]
-        ])
-        return {
-            "messages": [response]
-        }
-
 class Final_Answer_Node:
     def __init__(
             self,

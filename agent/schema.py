@@ -3,8 +3,7 @@ from pydantic import BaseModel,Field
 
 AgentName=Literal[
     "event_agent",
-    "graph_agent",
-    "basic_agent"
+    "graph_agent"
 ]
 
 class RouterOutput(BaseModel):
