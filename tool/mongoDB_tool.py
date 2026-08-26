@@ -5,6 +5,16 @@ from langchain.tools import tool
 mongoDB_interface=MongoDB_Interface()
 
 @tool
+def tool_get_len_epcis_event()->int:
+    """
+    MongoDB에 저장된 모든 EPCIS event 개수를 조회합니다.
+
+    Return:
+        int: MongoDB에 저장된 EPCIS event 개수
+    """
+    return len(mongoDB_interface.find_events())
+
+@tool
 def tool_get_epcis_event_by_id(
         event_id:str
     )->dict[str,Any]|None:

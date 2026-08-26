@@ -16,7 +16,7 @@ if __name__=="__main__":
     Execute app
     """
     parser=argparse.ArgumentParser()
-    parser.add_argument("--graph_id",type=str,default=f"synthetic-food-supply-chain-dataset")
+    parser.add_argument("--graph_id",type=str,default=f"supply_chain") # supply_chain, test_graph
     args=parser.parse_args()
     app_config={
         "graph_id":args.graph_id

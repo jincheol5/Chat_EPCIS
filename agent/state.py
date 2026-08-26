@@ -7,7 +7,7 @@ class ChatEPCISState(MessagesState):
     agent_queue:list[AgentName]
 
     # 현재 agent 
-    current_node:AgentName|None
+    current_agent:AgentName|None
 
     # 각 agent의 처리 결과
     agent_results:list[str]

@@ -1,5 +1,6 @@
 from datetime import datetime,timezone
 from typing import Any,Literal
+from tqdm import tqdm
 
 class OTG:
     """
@@ -555,7 +556,7 @@ class OTG:
         """
         nodes=[]
         edge_events=[]
-        for event in events:
+        for event in tqdm(events,desc=f"Transform EPCIS events..."):
             event_type=event.get("type")
             match event_type:
                 case "ObjectEvent"|"TransactionEvent":

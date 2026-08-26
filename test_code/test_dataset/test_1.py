@@ -1,6 +1,9 @@
 import os
 import argparse
 import json
+from module import MongoDB_Interface
+from graph import OTG
+
 
 """
 << Test >> 
@@ -33,6 +36,24 @@ def test_fn(**kwargs):
                 event_type_count[event["type"]]+=1
             print(event_type_count)
             print(event_list[0])
+
+        case 2:
+            """
+            Test. Check OTG
+            """
+            mongodb_interface=MongoDB_Interface()
+            graph=OTG()
+        
+            ### 1. get epcis events
+            epcis_events=mongodb_interface.find_events()
+        
+            ### 2. convert to Object traceability graph
+            graph_id=f"synthetic-food-supply-chain-dataset"
+            graph_elements=graph.transform_epcis_events_to_graph(events=epcis_events,graph_id=graph_id)
+            nodes=graph_elements["nodes"]
+            edge_events=graph_elements["edge_events"]
+            print(f"length of nodes: {len(nodes)}")
+            print(f"length of edge events: {len(edge_events)}")
 
 if __name__=="__main__":
     """

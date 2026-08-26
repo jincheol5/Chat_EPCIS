@@ -19,11 +19,17 @@ class Prompt:
         - Handles products, classes, locations and their relationships.
         - Use this agent for graph paths, neighbors, connectivity, degree, traceability, and relationships between EPCIS objects.
 
-        3. basic_agent
-        - Handles general questions that do not require EPCIS event or graph database access.
-
         Multiple agents may be selected when the user's request requires information from multiple data sources.
         Select only agents necessary to answer the request.
+
+        If the request does not require EPCIS event or graph database access, select no agents.
+
+        Return only a valid JSON object in exactly this format:
+        {"agents": ["event_agent"]}
+
+        The agents array may contain only "event_agent" and "graph_agent".
+        For a general question, return {"agents": []}.
+        Do not include markdown, code fences, explanations, or any other text.
         """
     ).strip()
 

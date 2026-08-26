@@ -1,5 +1,6 @@
 from typing import Literal,Any
 from collections import defaultdict
+from tqdm import tqdm
 from neo4j import GraphDatabase
 from neo4j.exceptions import Neo4jError
 
@@ -116,7 +117,7 @@ class Neo4j_Interface:
 
         created_nodes=[]
         with self.driver.session() as session:
-            for node_type,node_list in nodes_by_type.items():
+            for node_type,node_list in tqdm(nodes_by_type.items(),desc=f"Insert nodes..."):
                 query=f"""
                     UNWIND $node_list AS node
                     MERGE (n:`{node_type}` {{
@@ -235,7 +236,7 @@ class Neo4j_Interface:
 
         created_edges=[]
         with self.driver.session() as session:
-            for edge_type,edge_list in edge_events_by_type.items():
+            for edge_type,edge_list in tqdm(edge_events_by_type.items(),desc=f"Insert edge events..."):
                 query=f"""
                     UNWIND $edge_list AS edge
                     MATCH (src {{id: edge.src_id, graph_id: $graph_id}})

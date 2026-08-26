@@ -6,7 +6,7 @@ from .state import ChatEPCISState
 
 class Agent_Router_Node:
     def __init__(self,
-            model_name:str=f"gemma4",
+            model_name:str=f"gemma4:e4b",
             ollama_port:int=11434
         ):
         self.llm=ChatOllama(

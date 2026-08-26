@@ -6,7 +6,7 @@ def main():
     ChatEPCIS Agent를 생성하고 터미널에서 대화를 수행합니다.
     """
     chat_epcis=ChatEPCIS(
-        model_name="gemma4",
+        model_name="gemma4:latest",
         ollama_port=11434
     )
     agent=chat_epcis.get_agent()

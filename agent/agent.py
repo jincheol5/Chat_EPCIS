@@ -1,7 +1,9 @@
+import asyncio
 from langgraph.graph import StateGraph,START,END
 from langgraph.prebuilt import ToolNode,tools_condition
 from .node import *
 from .state import ChatEPCISState
+from .mcp_client import get_event_mcp_tools
 from tool import *
 
 class ChatEPCIS:
@@ -10,10 +12,12 @@ class ChatEPCIS:
             ollama_port:int=11434
         ):
         # tools
-        self.event_tool_list=[
-            tool_get_epcis_event_by_id,
-            tool_get_epcis_event_by_event_type
-        ]
+        # self.event_tool_list=[
+        #     tool_get_len_epcis_event,
+        #     tool_get_epcis_event_by_id,
+        #     tool_get_epcis_event_by_event_type
+        # ]
+        self.event_tool_list=asyncio.run(get_event_mcp_tools())
         self.graph_tool_list=[
             tool_get_num_graph_elements,
             tool_get_node_degree

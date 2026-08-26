@@ -15,7 +15,7 @@ def app():
     epcis_events=mongodb_interface.find_events()
 
     ### 2. convert to Object traceability graph
-    graph_id=f"synthetic-food-supply-chain-dataset"
+    graph_id=f"supply_chain"
     graph_elements=graph.transform_epcis_events_to_graph(events=epcis_events,graph_id=graph_id)
     nodes=graph_elements["nodes"]
     edge_events=graph_elements["edge_events"]
