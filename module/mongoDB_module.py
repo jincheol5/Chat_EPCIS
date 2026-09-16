@@ -161,16 +161,16 @@ class MongoDB_Interface:
             max_depth:int=5
         )->list[dict[str,Any]]:
         """
-        특정 EPC에서 시작하여 관련 EPCIS 이벤트를 추적합니다.
-        모든 분기에서 발견된 이벤트들을 하나의 traced_events 리스트에 합쳐 반환합니다.
+        특정 EPC에서 시작하여 관계들을 탐색하며 EPCIS event들을 추적.
+        탐색 과정에서 발견된 모든 event들을 하나의 traced_events 리스트에 합쳐 반환.
 
         direction (탐색 방향):
             forward:
-                시간 오름차순으로 탐색합니다.
+                시간 오름차순으로 탐색
                 AggregationEvent: child -> parent
                 TransformationEvent: input -> output
             backward:
-                시간 내림차순으로 탐색합니다.
+                시간 내림차순으로 탐색
                 AggregationEvent: parent -> child
                 TransformationEvent: output -> input
 
