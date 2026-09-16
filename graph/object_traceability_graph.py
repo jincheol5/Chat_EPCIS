@@ -13,12 +13,10 @@ class OTG:
             event_time:str
         ):
         """
-        밀리초(ms) 단위 unix timestamp로 변환
-
         ISO 8601 형식의 event_time을
-        밀리초(ms) 단위 Unix timestamp로 변환합니다.
+        초(second) 단위 Unix timestamp로 변환합니다.
 
-        예:
+        예시:
             2024-01-01T11:30:46Z
             2024-01-01T11:30:46+00:00
             2024-01-01T20:30:46+09:00
@@ -37,7 +35,7 @@ class OTG:
             event_datetime=event_datetime.replace(
                 tzinfo=timezone.utc
             )
-        return int(event_datetime.timestamp() * 1000)
+        return int(event_datetime.timestamp())
 
     def create_node_dict(self,
             node_id:str,
