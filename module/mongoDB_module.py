@@ -152,35 +152,280 @@ class MongoDB_Interface:
         values=self.collection.distinct(field_name)
         return sorted(value for value in values if value is not None)
 
-    def object_traceability(self,
+    def _trace_forward(self,
             epc:str,
+            event_time:int
+        ):
+        """
+        특정 EPC를 기준으로 시간 제약을 어기지 않는 정방향으로 연결된 EPC들과 해당 관계를 생성한 event들을 반환.
+        탐색 event type: AggregationEvent, TransformationEvent
+
+        forward 관계:
+            AggregationEvent: 
+                action = ADD:
+                    childEPCs -> parentID 
+                    childQuantityList.epcClass -> parentID 
+                    예시: box들 (child) -> pallet (parent)로 집계되었다.
+                action = DELETE:
+                    parentID -> childEPCs
+                    parentID -> childQuantityList.epcClass 
+                    예시: pallet (parent) -> box들 (child)로 분해되었다.
+            TransformationEvent: 
+                inputEPCList -> outputEPCList
+                inputQuantityList.epcClass -> outputEPCList 
+                inputEPCList -> outputQuantityList.epcClass
+                inputQuantityList.epcClass -> outputQuantityList.epcClass
+        """
+        query={
+            "$or":[
+                # Aggregation ADD: forward = child -> parent
+                {
+                    "type":"AggregationEvent",
+                    "action":"ADD",
+                    "$or":[
+                        {"childEPCs":epc},
+                        {"childQuantityList.epcClass":epc}
+                    ]
+                },
+
+                # Aggregation DELETE: forward = parent -> child
+                {
+                    "type":"AggregationEvent",
+                    "action":"DELETE",
+                    "parentID":epc
+                },
+
+                # Transformation: input -> output
+                {
+                    "type":"TransformationEvent",
+                    "$or":[
+                        {"inputEPCList":epc},
+                        {"inputQuantityList.epcClass":epc}
+                    ]
+                }
+            ],
+            "event_time":{
+                "$gt":event_time
+            }
+        }
+        related_epcs=[]
+        related_events=self.find_events(query=query)
+        for event in related_events:
+            event_type=event.get("type")
+            related_event_time=event["event_time"]
+            match event_type:
+                case "AggregationEvent":
+                    action=event.get("action")
+                    if action=="ADD":
+                        parent_id=event.get("parentID")
+                        related_epcs.append((parent_id,related_event_time))
+
+                    if action=="DELETE":
+                        # EPC Instance
+                        for child_epc in event.get("childEPCs",[]):
+                            related_epcs.append((child_epc,related_event_time))
+
+                        # EPC Class
+                        for quantity_element in event.get("childQuantityList",[]):
+                            epc_class=quantity_element.get("epcClass")
+                            related_epcs.append((epc_class,related_event_time))
+
+                case "TransformationEvent":
+                    # EPC Instance
+                    for output_epc in event.get("outputEPCList",[]):
+                        related_epcs.append((output_epc,related_event_time))
+
+                    # EPC Class
+                    for quantity_element in event.get("outputQuantityList",[]):
+                        epc_class=quantity_element.get("epcClass")
+                        related_epcs.append((epc_class,related_event_time))
+
+        # 자기 자신 제거, 중복 제거
+        related_epcs=[
+            (related_epc,related_event_time)
+            for related_epc,related_event_time in related_epcs
+            if related_epc!=epc
+        ]
+        related_epcs=list(dict.fromkeys(related_epcs))
+        return {
+            "object":related_epcs,
+            "event":related_events
+        }
+
+    def _trace_backward(self,
+            epc:str,
+            event_time:int
+        ):
+        """
+        특정 EPC를 기준으로 시간 제약을 어기지 않는 역방향으로 연결된 EPC들을 탐색하여 반환.
+        탐색 event type: AggregationEvent, TransformationEvent
+
+        backward 관계:
+            AggregationEvent: 
+                action = ADD:
+                    parentID -> childEPCs
+                    parentID -> childQuantityList.epcClass 
+                    예시: box들 (child) -> pallet (parent)로 집계되었다.
+                action = DELETE:
+                    childEPCs -> parentID
+                    childQuantityList.epcClass -> parentID
+                    예시: pallet (parent) -> box들 (child)로 분해되었다.
+            TransformationEvent: 
+                outputEPCList -> inputEPCList
+                outputEPCList -> inputQuantityList.epcClass
+                outputQuantityList.epcClass -> inputEPCList
+                outputQuantityList.epcClass -> inputQuantityList.epcClass
+        """
+        query={
+            "$or":[
+                # Aggregation ADD: backward = parent -> child
+                {
+                    "type":"AggregationEvent",
+                    "action":"ADD",
+                    "parentID": epc
+                },
+
+                # Aggregation DELETE: backward = child -> parent
+                {
+                    "type":"AggregationEvent",
+                    "action":"DELETE",
+                    "$or": [
+                        {"childEPCs": epc},
+                        {"childQuantityList.epcClass":epc}
+                    ]
+                },
+
+                # Transformation: output -> input
+                {
+                    "type":"TransformationEvent",
+                    "$or":[
+                        {"outputEPCList":epc},
+                        {"outputQuantityList.epcClass":epc}
+                    ]
+                }
+            ],
+            "event_time":{
+                "$lt":event_time
+            }
+        }
+        related_epcs=[]
+        related_events=self.find_events(query=query)
+        for event in related_events:
+            event_type=event.get("type")
+            related_event_time=event["event_time"]
+            match event_type:
+                case "AggregationEvent":
+                    action=event.get("action")
+                    if action=="ADD":
+                        # EPC Instance
+                        for child_epc in event.get("childEPCs",[]):
+                            related_epcs.append((child_epc,related_event_time))
+
+                        # EPC Class
+                        for quantity_element in event.get("childQuantityList",[]):
+                            epc_class=quantity_element.get("epcClass")
+                            related_epcs.append((epc_class,related_event_time))
+                    if action=="DELETE":
+                        parent_id=event.get("parentID")
+                        related_epcs.append((parent_id,related_event_time))
+
+                case "TransformationEvent":
+                    # EPC Instance
+                    for input_epc in event.get("inputEPCList",[]):
+                        related_epcs.append((input_epc,related_event_time))
+
+                    # EPC Class
+                    for quantity_element in event.get("inputQuantityList",[]):
+                        epc_class=quantity_element.get("epcClass")
+                        related_epcs.append((epc_class,related_event_time))
+
+        # 자기 자신 제거, 중복 제거
+        related_epcs=[
+            (related_epc,related_event_time)
+            for related_epc,related_event_time in related_epcs
+            if related_epc!=epc
+        ]
+        related_epcs=list(dict.fromkeys(related_epcs))
+        return {
+            "object":related_epcs,
+            "event":related_events
+        }
+
+    def trace_object(self,
+            epc:str,
+            event_time:int,
             direction:Literal[
                 "backward",
                 "forward"
             ]="backward",
-            max_depth:int=5
+            max_hop:int=5
         )->list[dict[str,Any]]:
         """
-        특정 EPC에서 시작하여 관계들을 탐색하며 EPCIS event들을 추적.
-        탐색 과정에서 발견된 모든 event들을 하나의 traced_events 리스트에 합쳐 반환.
+        매 hop마다 이전 hop에서 찾은 (epc,event_time)을 하나 하나 direction 함수로 탐색.
+        최종 반환 값은 각 hop 수를 key로 가지고 object와 event list dict를 value로 가지는 dict.
 
-        direction (탐색 방향):
-            forward:
-                시간 오름차순으로 탐색
-                AggregationEvent: child -> parent
-                TransformationEvent: input -> output
-            backward:
-                시간 내림차순으로 탐색
-                AggregationEvent: parent -> child
-                TransformationEvent: output -> input
-
-        Input:
-            epc: str
-            direction: backward | forward
-            max_depth: int
         Return:
-            Traced EPCIS Event list
+            {
+                0:{
+                    "object":[(epc,event_time)],
+                    "event":[]
+                },
+                1:{
+                    "object":[...],
+                    "event":[...]
+                },
+                ...
+            }
         """
+        match direction:
+            case "backward":
+                trace_fn=self._trace_backward
+            case "forward":
+                trace_fn=self._trace_forward
+
+        final_trace_result={
+            0:{
+                "object":[(epc,event_time)],
+                "event":[]
+            }
+        }
+        cur_objects=[(epc,event_time)]
+        for hop in range(1,max_hop+1):
+            hop_objects=[]
+            hop_events=[]
+            for cur_epc,cur_event_time in cur_objects:
+                trace_result=trace_fn(
+                    epc=cur_epc,
+                    event_time=cur_event_time
+                )
+                hop_objects.extend(trace_result["object"])
+                hop_events.extend(trace_result["event"])
+
+            # object 중복 제거
+            hop_objects=list(dict.fromkeys(hop_objects))
+
+            # event 중복 제거
+            unique_events=[]
+            seen_event_ids=set()
+            for event in hop_events:
+                event_id=event.get("eventID")
+                if event_id in seen_event_ids:
+                    continue
+                seen_event_ids.add(event_id)
+                unique_events.append(event)
+            hop_events=unique_events
+
+            # Add to final_trace_result
+            final_trace_result[hop]={
+                "object":hop_objects,
+                "event":hop_events
+            }
+
+            # 더 이상 탐색할 object가 없으면 종료
+            if len(hop_objects)==0:
+                break
+            cur_objects=hop_objects
+        return final_trace_result
 
 
 
@@ -189,127 +434,4 @@ class MongoDB_Interface:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-    # def find_event_types(self):
-    #     """
-    #     반환 예시:
-    #         [
-    #             "AggregationEvent",
-    #             "AssociationEvent",
-    #             "ObjectEvent",
-    #             "TransformationEvent"
-    #         ]
-    #     """
-    #     return self.find_distinct_event_values("type")
-
-    # def find_biz_steps(self):
-    #     return self.find_distinct_event_values("bizStep")
-
-    # def find_biz_locations(self):
-    #     return self.find_distinct_event_values("bizLocation.id")
-
-    # def find_read_points(self):
-    #     return self.find_distinct_event_values("readPoint.id")
-
-    # def find_dispositions(self):
-    #     return self.find_distinct_event_values("disposition")
-
-    # def find_epcs(self):
-    #     fields=(
-    #         "parentID","epcList","childEPCs","inputEPCList","outputEPCList",
-    #         "quantityList.epcClass","childQuantityList.epcClass",
-    #         "inputQuantityList.epcClass","outputQuantityList.epcClass",
-    #     )
-    #     epcs=set()
-    #     for field_name in fields:
-    #         epcs.update(self.event_collection.distinct(field_name))
-    #     epcs.discard(None)
-    #     return sorted(epcs)
-
-    # def find_events_by_event_type(self,
-    #         event_type:Literal[
-    #             "ObjectEvent",
-    #             "AggregationEvent",
-    #             "TransformationEvent",
-    #             "TransactionEvent",
-    #             "AssociationEvent"
-    #         ],
-    #         limit:int|None=None
-    #     ):
-    #     return self.find_events_by_filter(
-    #         query={
-    #             "type":event_type
-    #         },
-    #         limit=limit
-    #     )
-
-    # def find_events_by_biz_step(self,
-    #         biz_step:str,
-    #         limit:int|None=None
-    #     ):
-    #     return self.find_events_by_filter(
-    #         query={
-    #             "bizStep":biz_step
-    #         },
-    #         limit=limit
-    #     )
-
-    # def find_events_by_biz_location(self,
-    #         biz_location:str,
-    #         limit:int|None=None
-    #     ):
-    #     return self.find_events_by_filter(
-    #         query={
-    #             "bizLocation.id":biz_location
-    #         },
-    #         limit=limit
-    #     )
-
-    # def find_events_by_read_point(self,
-    #         read_point:str,
-    #         limit:int|None=None
-    #     ):
-    #     return self.find_events_by_filter(
-    #         query={
-    #             "readPoint.id":read_point
-    #         },
-    #         limit=limit
-    #     )
-
-    # def find_events_by_disposition(self,
-    #         disposition:str,
-    #         limit:int|None=None
-    #     ):
-    #     return self.find_events_by_filter(
-    #         query={
-    #             "disposition":disposition
-    #         },
-    #         limit=limit
-    #     )
-
-    # def find_events_by_epc(self,
-    #         epc:str,
-    #         limit:int|None=None
-    #     ):
-    #     fields=(
-    #         "parentID","epcList","childEPCs","inputEPCList","outputEPCList",
-    #         "quantityList.epcClass","childQuantityList.epcClass",
-    #         "inputQuantityList.epcClass","outputQuantityList.epcClass",
-    #     )
-    #     return self.find_events_by_filter(
-    #         query={
-    #             "$or":[{field:epc} for field in fields]
-    #         },
-    #         limit=limit
-    #     )
 

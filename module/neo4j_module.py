@@ -6,15 +6,7 @@ from neo4j.exceptions import Neo4jError
 
 class Neo4j_Interface:
     def __init__(self,port:int=7687):
-        try:
-            self.driver=GraphDatabase.driver(
-                f"neo4j://127.0.0.1:{port}",
-                auth=("neo4j","11111111")
-            )
-            self.driver.verify_connectivity()
-            print("Neo4j 연결 성공")
-        except Neo4jError as e:
-            print(f"Neo4j error: {e}")
+        self.connect_db(port=port)
 
     def connect_db(self,port:int=7687):
         try:
@@ -32,6 +24,22 @@ class Neo4j_Interface:
             self.driver.close()
             self.driver=None
             print("Neo4j database disconnected!")
+
+
+
+
+    
+
+
+
+
+
+
+
+
+
+
+
 
     def delete_graph(self,
             graph_id:str
