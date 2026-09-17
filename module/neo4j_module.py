@@ -25,10 +25,40 @@ class Neo4j_Interface:
             self.driver=None
             print("Neo4j database disconnected!")
 
+    def add_node(self,
+            node_id:str,
+            graph_id:str,
+            node_type:Literal["class","instance","location"],
+            **properties
+        ):
+        """
+        {} : Python f-string 문자열 치환
+        $  : Cypher parameter binding
 
-
-
-    
+        node_type은 Label이므로 f-string으로 삽입하고,
+        property 값은 Cypher parameter로 전달합니다.
+        """
+        query=f"""
+            MERGE (n:{node_type}
+                {{
+                    id:$node_id,
+                    graph_id:$graph_id
+                }}
+            )
+            SET n += $properties
+        """
+        params={
+            "node_id":node_id,
+            "graph_id":graph_id,
+            "properties":properties
+        }
+        try:
+            self.driver.execute_query(
+                query_=query,
+                parameters_=params
+            )
+        except Neo4jError as e:
+            print(f"Neo4j error: {e}")
 
 
 
